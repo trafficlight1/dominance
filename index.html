@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Морфологія Львова</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@300;400;600&family=Onest:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  :root {
+    --bg: #0d0f14;
+    --surface: #13161e;
+    --surface2: #1a1e28;
+    --border: #252a38;
+    --text: #e8eaf0;
+    --text-muted: #6b7280;
+    --accent: #8B0000;
+    --panel-w: 272px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Onest', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100dvh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* HEADER */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    height: 50px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    z-index: 1000;
+    position: relative;
+  }
+  header h1 {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  header h1 span { color: var(--accent); }
+
+  .header-tabs { display: flex; gap: 4px; }
+  .tab-btn {
+    background: none;
+    border: 1px solid transparent;
+    color: var(--text-muted);
+    padding: 5px 14px;
+    border-radius: 6px;
+    font-family: 'Onest', sans-serif;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .tab-btn:hover { color: var(--text); border-color: var(--border); }
+  .tab-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  .menu-btn {
+    display: none;
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text);
+    width: 34px; height: 34px;
+    border-radius: 8px;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+  }
+
+  /* MAIN */
+  .main { display: flex; flex: 1; min-height: 0; position: relative; }
+
+  /* SIDEBAR */
+  .sidebar {
+    width: var(--panel-w);
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    flex-shrink: 0;
+    transition: transform 0.25s ease;
+    z-index: 900;
+  }
+  .sidebar-inner {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .section-title {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+    margin-top: 20px;
+  }
+  .section-title:first-child { margin-top: 0; }
+
+  /* LAYER TOGGLES */
+  .layer-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.12s;
+    margin-bottom: 3px;
+    user-select: none;
+  }
+  .layer-row:hover { background: var(--surface2); }
+  .toggle {
+    width: 30px; height: 16px;
+    background: var(--border);
+    border-radius: 8px;
+    position: relative;
+    flex-shrink: 0;
+    transition: background 0.2s;
+  }
+  .toggle::after {
+    content: '';
+    position: absolute;
+    width: 10px; height: 10px;
+    background: #fff;
+    border-radius: 50%;
+    top: 3px; left: 3px;
+    transition: transform 0.2s;
+  }
+  .toggle.on { background: var(--accent); }
+  .toggle.on::after { transform: translateX(14px); }
+  .layer-label { font-size: 13px; flex: 1; }
+  .layer-count { font-size: 10px; color: var(--text-muted); }
+
+  /* LEGEND */
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 3px 0;
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+  .legend-line { width: 22px; height: 3px; border-radius: 2px; flex-shrink: 0; }
+  .legend-grad {
+    width: 100%; height: 12px;
+    border-radius: 4px;
+    background: linear-gradient(to right, #f5f0e8, #444444);
+    margin: 6px 0 3px;
+  }
+  .legend-grad-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: var(--text-muted);
+  }
+
+  /* LOADING */
+  .loading-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 0;
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+  .spinner {
+    width: 11px; height: 11px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .dot-ok  { width: 7px; height: 7px; background: #34d399; border-radius: 50%; flex-shrink: 0; }
+  .dot-err { width: 7px; height: 7px; background: #f87171; border-radius: 50%; flex-shrink: 0; }
+
+  /* INFO PANEL */
+  .info-panel {
+    position: absolute;
+    bottom: 20px; right: 20px;
+    width: 230px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    z-index: 800;
+    font-size: 12px;
+    display: none;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.45);
+  }
+  .info-panel.visible { display: block; }
+  .info-title {
+    font-family: 'Unbounded', sans-serif;
+    font-size: 9px; font-weight: 600;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .info-title button { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 14px; }
+  .info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+    padding: 4px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .info-row:last-child { border-bottom: none; }
+  .info-key { color: var(--text-muted); white-space: nowrap; }
+  .info-val { color: var(--text); font-weight: 500; text-align: right; word-break: break-word; }
+
+  /* MAP */
+  #map { flex: 1; background: var(--bg); }
+  .leaflet-container { background: #000000 !important; }
+  .leaflet-control-zoom {
+    border: 1px solid var(--border) !important;
+    border-radius: 8px !important;
+    overflow: hidden;
+    box-shadow: none !important;
+  }
+  .leaflet-control-zoom a {
+    background: var(--surface) !important;
+    color: var(--text) !important;
+    border-color: var(--border) !important;
+    width: 28px !important; height: 28px !important; line-height: 28px !important;
+    font-size: 15px !important;
+  }
+  .leaflet-control-zoom a:hover { background: var(--surface2) !important; }
+  .leaflet-control-attribution { display: none !important; }
+
+  /* STATS */
+  .stats-bar {
+    position: absolute;
+    top: 12px; left: 50%;
+    transform: translateX(-50%);
+    display: flex; gap: 6px;
+    z-index: 700; pointer-events: none;
+  }
+  .stat-chip {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 4px 11px;
+    font-size: 11px; color: var(--text-muted);
+    white-space: nowrap;
+  }
+  .stat-chip strong { color: var(--text); font-weight: 500; }
+
+  /* MOBILE */
+  .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 850; }
+
+  @media (max-width: 680px) {
+    :root { --panel-w: 285px; }
+    header { padding: 0 14px; }
+    header h1 { font-size: 11px; }
+    .header-tabs { display: none; }
+    .menu-btn { display: flex; }
+    .sidebar {
+      position: fixed;
+      top: 50px; left: 0;
+      height: calc(100dvh - 50px);
+      transform: translateX(-100%);
+      box-shadow: 4px 0 24px rgba(0,0,0,0.5);
+    }
+    .sidebar.open { transform: translateX(0); }
+    .overlay.open { display: block; }
+    .mobile-tabs { display: flex; padding: 12px 14px 0; gap: 5px; }
+    .mobile-tab {
+      flex: 1;
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 7px 4px;
+      border-radius: 7px;
+      font-family: 'Onest', sans-serif;
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .mobile-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .info-panel { width: calc(100vw - 28px); right: 14px; bottom: 14px; }
+    .stats-bar { top: 8px; gap: 4px; }
+    .stat-chip { font-size: 10px; padding: 3px 8px; }
+  }
+  @media (min-width: 681px) { .mobile-tabs { display: none; } }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Морфологія <span>Львова</span></h1>
+  <div class="header-tabs">
+
+  </div>
+  <button class="menu-btn" id="menuBtn">☰</button>
+</header>
+
+<div class="overlay" id="overlay"></div>
+
+<div class="main">
+  <aside class="sidebar" id="sidebar">
+    <div class="mobile-tabs">
+      <button class="mobile-tab active" data-layer="all">Всі</button>
+    </div>
+    <div class="sidebar-inner">
+
+      <p class="section-title">Статус даних</p>
+      <div id="loadStatus"></div>
+
+      <p class="section-title">Шари</p>
+      <div class="layer-row" id="rowStreets">
+        <span class="toggle on" id="togStreets"></span>
+        <span class="layer-label">Вулиці</span>
+        <span class="layer-count" id="cntStreets"></span>
+      </div>
+      <div class="layer-row" id="rowBuildings">
+        <span class="toggle on" id="togBuildings"></span>
+        <span class="layer-label">Будинки</span>
+        <span class="layer-count" id="cntBuildings"></span>
+      </div>
+      <div class="layer-row" id="rowParks">
+        <span class="toggle on" id="togParks"></span>
+        <span class="layer-label">Парки</span>
+        <span class="layer-count" id="cntParks"></span>
+      </div>
+      <div class="layer-row" id="rowCrossings">
+        <span class="toggle" id="togCrossings"></span>
+        <span class="layer-label">Переходи</span>
+        <span class="layer-count" id="cntCrossings"></span>
+      </div>
+      <div class="layer-row" id="rowFootways">
+        <span class="toggle" id="togFootways"></span>
+        <span class="layer-label">Тротуари</span>
+        <span class="layer-count" id="cntFootways"></span>
+      </div>
+
+      <div id="streetLegendWrap">
+        <p class="section-title">Типи вулиць</p>
+        <div id="streetLegend"></div>
+      </div>
+
+      <div id="buildingLegendWrap" style="display:none">
+        <p class="section-title">Епоха будівництва</p>
+        <div id="buildingEpochLegend"></div>
+        <div class="legend-item" style="margin-top:8px">
+          <div style="width:9px;height:9px;background:rgba(70,70,70,0.5);border-radius:50%;flex-shrink:0"></div>
+          <span>Рік невідомий</span>
+        </div>
+        <div id="buildingYearRange" style="font-size:11px;color:var(--text-muted);margin-top:6px"></div>
+      </div>
+
+    </div>
+  </aside>
+
+  <div id="map">
+    <div class="stats-bar" id="statsBar"></div>
+  </div>
+</div>
+
+<div class="info-panel" id="infoPanel">
+  <div class="info-title">
+    <span id="infoPanelTitle">Об'єкт</span>
+    <button onclick="closeInfo()">✕</button>
+  </div>
+  <div id="infoPanelBody"></div>
+</div>
+
+<script>
+// Colors keyed by lighting_pattern_name (the morphological type field in the data)
+const STREET_COLORS = {
+  // Спокійні зони (Холодні відтінки)
+  'Житлова / Спальна':       '#4f8cff', // Насичений синій
+  'Пішохідна':               '#93c5fd', // Світло-блакитний
+
+  // Активні / Транзитні зони (Теплі відтінки)
+  'Магістраль':              '#FF2400', 
+  'Транзитна':               '#fbbf24', // Теплий жовтий/бурштиновий
+  'Комерційна':              '#FFD700', 
+  'Торговельна транзитна':   '#fde68a', // Світло-жовтий
+
+  // Еко-зони (Зелені відтінки)
+  'Зелена магістраль':       '#008153', // Салатовий/Лаймовий
+  'Озеленена / Паркова':     '#84DF5A', // М'який зелений
+
+  // Спеціальна інфраструктура (Контрастний акцент)
+  'Трамвайний кор.':         '#a855f7', // Фіолетовий
+};
+
+// Legend groups for sidebar
+const STREET_GROUPS = [
+  { label: 'Житлова / Рекреаційна', color: '#4f8cff',  patterns: ['Житлова / Спальна','Пішохідна'] },
+  { label: 'Магістральна / Транзитна', color: '#f97316', patterns: ['Магістраль','Зелена магістраль','Транзитна'] },
+  { label: 'Комерційна',            color: '#f59e0b',  patterns: ['Комерційна','Торговельна транзитна'] },
+  { label: 'Озеленена',             color: '#4ade80',  patterns: ['Озеленена / Паркова'] },
+  { label: 'Трамвайна',             color: '#a855f7',  patterns: ['Трамвайний кор.'] },
+];
+
+
+// Fallback labels for raw OSM highway tags (used in info panel when morphological type is absent)
+const STREET_LABELS = {
+  'motorway':       'Автомагістраль',
+  'motorway_link':  'З\'їзд автомагістралі',
+  'trunk':          'Швидкісна дорога',
+  'trunk_link':     'З\'їзд швидкісної',
+  'primary':        'Першорядна вулиця',
+  'primary_link':   'З\'їзд першорядної',
+  'secondary':      'Другорядна вулиця',
+  'secondary_link': 'З\'їзд другорядної',
+  'tertiary':       'Третинна вулиця',
+  'tertiary_link':  'З\'їзд третинної',
+  'residential':    'Житлова вулиця',
+  'living_street':  'Зона проживання',
+  'unclassified':   'Некласифікована',
+  'service':        'Службовий проїзд',
+  'pedestrian':     'Пішохідна',
+  'footway':        'Тротуар',
+  'path':           'Стежка',
+  'cycleway':       'Велодоріжка',
+  'steps':          'Сходи',
+  'track':          'Ґрунтова дорога',
+  'default':        'Вулиця',
+};
+
+// MAP
+const LVIV_BOUNDS = L.latLngBounds(L.latLng(49.77, 23.86), L.latLng(50.00, 24.18));
+const map = L.map('map', {
+  center: [49.842, 24.031], zoom: 13,
+  maxBounds: LVIV_BOUNDS, maxBoundsViscosity: 0.92,
+  minZoom: 11, maxZoom: 19,
+});
+
+
+// LAYERS
+const layers = {
+  parks:     { group: L.layerGroup().addTo(map), on: true  },
+  streets:   { group: L.layerGroup().addTo(map), on: true  },
+  buildings: { group: L.layerGroup().addTo(map), on: true  },
+  crossings: { group: L.layerGroup(),            on: false },
+  footways:  { group: L.layerGroup(),            on: false },
+};
+function syncToggle(key) {
+  const id = 'tog' + key[0].toUpperCase() + key.slice(1);
+  const tog = document.getElementById(id);
+  if (!tog) return;
+  if (layers[key].on) { tog.classList.add('on');    map.addLayer(layers[key].group); }
+  else                { tog.classList.remove('on'); map.removeLayer(layers[key].group); }
+}
+Object.keys(layers).forEach(syncToggle);
+['Streets','Buildings','Parks','Crossings','Footways'].forEach(name => {
+  const key = name.toLowerCase();
+  const handler = e => { e.stopPropagation(); layers[key].on = !layers[key].on; syncToggle(key); };
+  document.getElementById('tog'+name)?.addEventListener('click', handler);
+  document.getElementById('row'+name)?.addEventListener('click', handler);
+});
+
+// EPSG:3857 (Web Mercator metres) → [lat, lng]
+function merc2ll(x, y) {
+  const lng = x / 20037508.342 * 180;
+  const lat = Math.atan(Math.exp(y / 20037508.342 * Math.PI)) * 360 / Math.PI - 90;
+  return [lat, lng];
+}
+// Detect if coordinates are in metres (|x| > 180 means it's projected)
+function coordsToLatLng(coords) {
+  return coords.map(c => Math.abs(c[0]) > 180 ? merc2ll(c[0], c[1]) : [c[1], c[0]]);
+}
+// METERS → PIXELS
+function m2px(m) {
+  const mpp = 156543.03392 * Math.cos(map.getCenter().lat * Math.PI / 180) / Math.pow(2, map.getZoom());
+  return m / mpp;
+}
+
+
+let streetLayersRef = [];
+let streetTypesFound = new Set();
+function resolveStreetColor(p) {
+  // Primary: lighting_pattern_name is the morphological type
+  const name = p.lighting_pattern_name;
+  if (name && STREET_COLORS[name]) return { color: STREET_COLORS[name], typeKey: name };
+  // Fallback: OSM highway tag
+  const hw = p.highway || p.type || 'default';
+  return { color: HIGHWAY_COLORS[hw] || '#6b7280', typeKey: hw };
+}
+
+function renderStreets(data) {
+  layers.streets.group.clearLayers();
+  streetLayersRef = []; streetTypesFound = new Set();
+  const pw = m2px(1);
+  (data.features || []).forEach(feat => {
+    if (!feat.geometry) return;
+    const p = feat.properties || {};
+    const { color, typeKey } = resolveStreetColor(p);
+    const hw = typeKey;
+    const widthM = Math.min(40, Math.max(1, parseFloat(p.street_width_m) || parseFloat(p.width) || 6));
+    streetTypesFound.add(hw);
+    const rawCoords = feat.geometry.type === 'LineString' ? [feat.geometry.coordinates]
+      : feat.geometry.type === 'MultiLineString' ? feat.geometry.coordinates : null;
+    if (!rawCoords) return;
+    rawCoords.forEach(coords => {
+      const weight = Math.max(1, widthM * pw);
+      const line = L.polyline(coordsToLatLng(coords), {
+        color, weight, opacity: 0.82, lineCap: 'round', lineJoin: 'round'
+      });
+      line.on('click', e => { L.DomEvent.stopPropagation(e); showInfo('Вулиця', {
+        'Тип': p.street_type_name || p.morph_type || STREET_LABELS[hw] || hw,
+        'Ширина': p.street_width_m != null ? p.street_width_m+' м' : (p.width || '—'),
+        'Довжина': p.seg_len_m != null ? Math.round(p.seg_len_m)+' м' : '—',
+        'Освітлення': p.lighting_pattern_name || '—',
+        'Тип освітлення': p.lighting_pattern_id || '—',
+        'ID': p.full_id || '—',
+      }); });
+      layers.streets.group.addLayer(line);
+      streetLayersRef.push({ line, widthM, typeKey: hw });
+    });
+  });
+  renderStreetLegend();
+  document.getElementById('cntStreets').textContent = (data.features||[]).length.toLocaleString('uk');
+  updateStats();
+}
+map.on('zoomend', () => {
+  if (!streetLayersRef.length) return;
+  const pw = m2px(1);
+  streetLayersRef.forEach(({line, widthM}) => {
+    const weight = Math.max(1, widthM * pw);
+    line.setStyle({ weight });
+  });
+});
+function renderStreetLegend() {
+  const el = document.getElementById('streetLegend');
+  el.innerHTML = '';
+  // Count segments per pattern name
+  const counts = {};
+  streetLayersRef.forEach(({ typeKey }) => { counts[typeKey] = (counts[typeKey] || 0) + 1; });
+
+  STREET_GROUPS.forEach(group => {
+    const foundPatterns = group.patterns.filter(p => counts[p]);
+    if (!foundPatterns.length) return;
+    const groupTotal = foundPatterns.reduce((s, p) => s + (counts[p] || 0), 0);
+    el.innerHTML += `
+      <div style="display:flex;align-items:center;gap:8px;padding:5px 0 3px;margin-top:4px">
+        <div style="width:10px;height:10px;border-radius:50%;background:${group.color};flex-shrink:0"></div>
+        <span style="font-size:11px;font-weight:600;color:var(--text);flex:1">${group.label}</span>
+        <span style="font-size:10px;color:var(--text-muted)">${groupTotal.toLocaleString('uk')}</span>
+      </div>`;
+    foundPatterns.forEach(pat => {
+      const color = STREET_COLORS[pat] || group.color;
+      el.innerHTML += `
+        <div style="display:flex;align-items:center;gap:8px;padding:2px 0 2px 18px">
+          <div style="width:18px;height:3px;border-radius:2px;background:${color};flex-shrink:0"></div>
+          <span style="font-size:11px;color:var(--text-muted);flex:1">${pat}</span>
+          <span style="font-size:10px;color:var(--text-muted)">${(counts[pat]||0).toLocaleString('uk')}</span>
+        </div>`;
+    });
+  });
+  // Any unmatched types
+  Object.keys(counts).forEach(key => {
+    const inGroup = STREET_GROUPS.some(g => g.patterns.includes(key));
+    if (!inGroup) {
+      const color = STREET_COLORS[key] || HIGHWAY_COLORS[key] || '#6b7280';
+      el.innerHTML += `<div style="display:flex;align-items:center;gap:8px;padding:2px 0">
+        <div style="width:18px;height:3px;border-radius:2px;background:${color};flex-shrink:0"></div>
+        <span style="font-size:11px;color:var(--text-muted);flex:1">${key}</span>
+        <span style="font-size:10px;color:var(--text-muted)">${counts[key].toLocaleString('uk')}</span>
+      </div>`;
+    }
+  });
+}
+
+// Reproject a GeoJSON feature's coordinates from EPSG:3857 to WGS84 in-place (deep clone)
+function reprojectFeature(feat) {
+  if (!feat || !feat.geometry) return feat;
+  const f = JSON.parse(JSON.stringify(feat));
+  function reproj(coords) {
+    if (!Array.isArray(coords)) return coords;
+    if (typeof coords[0] === 'number') {
+      if (Math.abs(coords[0]) > 180) {
+        const ll = merc2ll(coords[0], coords[1]);
+        return [ll[1], ll[0]]; // GeoJSON wants [lng, lat]
+      }
+      return coords;
+    }
+    return coords.map(reproj);
+  }
+  f.geometry.coordinates = reproj(f.geometry.coordinates);
+  return f;
+}
+
+// BUILDINGS
+// ═══════════════════════════════════════════════════════════════════
+//  🎨  КОЛЬОРИ БУДИНКІВ ЗА ЕПОХОЮ — ТУТ РЕДАГУЙТЕ
+//  Кожен запис: { until: <рік включно>, color: '<hex>', label: '<назва>' }
+//  Епохи перевіряються знизу вгору — перший діапазон, що підходить, виграє.
+// ═══════════════════════════════════════════════════════════════════
+const BUILDING_EPOCHS = [
+  { until: 1599, color: '#C49A6C', label: 'До 1600 (Середньовіччя / Ренесанс)' }, 
+  { until: 1800, color: '#C9A84C', label: '1600–1800 (Бароко / Класицизм)' }, 
+  { until: 1870, color: '#D4C5A9', label: '1800–1870 (Рання еклектика)' }, 
+  { until: 1900, color: '#C47C6E', label: '1870–1900 (Сецесія)' }, 
+  { until: 1918, color: '#7D8C5C', label: '1900–1918 (Пізня сецесія / Модерн)' }, 
+  { until: 1939, color: '#C8B89A', label: '1918–1939 (Міжвоєнний модернізм / Арт-деко)' }, 
+  { until: 1960, color: '#7087A3', label: '1939–1960 (Сталінський ампір / Ретроспективізм)' }, 
+  { until: 1991, color: '#B5BDBF', label: '1960–1991 (Модернізм)' }, 
+  { until: 2010, color: '#A8A39D', label: '1991–2010 (Постмодернізм)' }, 
+  { until: 9999, color: '#CBD3D8', label: '2010–тепер (Сучасна архітектура)' }, 
+];
+
+const BUILDING_COLOR_UNKNOWN = '#888B8D'; // Світло-сірий (нейтральний) для невідомих дат
+
+function renderBuildingEpochLegend() {
+  const el = document.getElementById('buildingEpochLegend');
+  if (!el) return;
+  el.innerHTML = BUILDING_EPOCHS.map(e => `
+    <div style="display:flex;align-items:center;gap:8px;padding:3px 0">
+      <div style="width:14px;height:14px;border-radius:3px;background:${e.color};flex-shrink:0;opacity:0.9"></div>
+      <span style="font-size:11px;color:var(--text-muted);line-height:1.3">${e.label}</span>
+    </div>`).join('');
+}
+
+function yearToColor(y) {
+  if (!y || isNaN(y)) return BUILDING_COLOR_UNKNOWN;
+  const epoch = BUILDING_EPOCHS.find(e => y <= e.until);
+  return epoch ? epoch.color : BUILDING_COLOR_UNKNOWN;
+}
+function renderBuildings(data) {
+  layers.buildings.group.clearLayers();
+  renderBuildingEpochLegend();
+  let minY = Infinity, maxY = -Infinity;
+  (data.features || []).forEach(feat => {
+    if (!feat.geometry) return;
+    const p = feat.properties || {};
+    const year = parseInt(p.test) || parseInt(p.start_date) || parseInt(p.construction_year)
+      || parseInt(p['building:start_date']) || null;
+    if (year) { if (year < minY) minY = year; if (year > maxY) maxY = year; }
+    L.geoJSON(reprojectFeature(feat), { style: { color: 'rgba(100,100,100,0.2)', weight: 0.5, fillColor: yearToColor(year), fillOpacity: 0.78 } })
+      .on('click', e => { L.DomEvent.stopPropagation(e); showInfo('Будинок', {
+        'Рік побудови': year || '—',
+        'Тип': p.building || '—',
+        'Поверхи': p['building:levels'] || p.building_levels || '—',
+        'Вулиця': p['addr:street'] ? `${p['addr:street']} ${p['addr:housenumber']||''}` : '—',
+      }); })
+      .addTo(layers.buildings.group);
+  });
+  document.getElementById('cntBuildings').textContent = (data.features||[]).length.toLocaleString('uk');
+  if (minY < Infinity) document.getElementById('buildingYearRange').textContent = `${minY} — ${maxY} рр.`;
+  updateStats();
+}
+
+// PARKS
+function renderParks(data) {
+  layers.parks.group.clearLayers();
+  (data.features||[]).forEach(feat => {
+    if (!feat.geometry) return;
+    L.geoJSON(reprojectFeature(feat), { style: { color: '#1a3d2b', weight: 1, fillColor: '#1c4532', fillOpacity: 0.55 } }).addTo(layers.parks.group);
+  });
+  document.getElementById('cntParks').textContent = (data.features||[]).length.toLocaleString('uk');
+  updateStats();
+}
+
+// CROSSINGS
+function renderCrossings(data) {
+  layers.crossings.group.clearLayers();
+  (data.features||[]).forEach(feat => {
+    if (!feat.geometry) return;
+    const g = feat.geometry;
+    if (g.type === 'Point') {
+      const ll = Math.abs(g.coordinates[0]) > 180 ? merc2ll(g.coordinates[0], g.coordinates[1]) : [g.coordinates[1], g.coordinates[0]];
+      L.circleMarker(ll, {
+      radius: 4, color: '#F1EAD7', weight: 1, fillColor: '#F1EAD7', fillOpacity: 0.7
+      }).addTo(layers.crossings.group);
+    }
+  });
+  document.getElementById('cntCrossings').textContent = (data.features||[]).length.toLocaleString('uk');
+}
+
+// FOOTWAYS
+function renderFootways(data) {
+  layers.footways.group.clearLayers();
+  (data.features||[]).forEach(feat => {
+    if (!feat.geometry) return;
+    const raw = feat.geometry.type === 'LineString' ? [feat.geometry.coordinates]
+      : feat.geometry.type === 'MultiLineString' ? feat.geometry.coordinates : null;
+    if (!raw) return;
+    raw.forEach(coords => L.polyline(coordsToLatLng(coords), { color: '#c084fc', weight: 1, opacity: 0.55 }).addTo(layers.footways.group));
+  });
+  document.getElementById('cntFootways').textContent = (data.features||[]).length.toLocaleString('uk');
+}
+
+// LOAD STATUS UI
+function setLoadRow(id, state, text) {
+  let el = document.getElementById('lr_'+id);
+  if (!el) { el = document.createElement('div'); el.id = 'lr_'+id; el.className = 'loading-row'; document.getElementById('loadStatus').appendChild(el); }
+  const icon = state==='loading' ? '<div class="spinner"></div>' : state==='ok' ? '<div class="dot-ok"></div>' : '<div class="dot-err"></div>';
+  el.innerHTML = `${icon}<span>${text}</span>`;
+}
+
+// FETCH FILES
+const FILES = [
+  { name: './result-data/12.geojson',  key: 'streets',   render: renderStreets   },
+  { name: './result-data/DATA4_f.geojson',    key: 'buildings',  render: renderBuildings },
+  { name: './result-data/park_f.geojson',     key: 'parks',      render: renderParks     },
+  { name: './result-data/crossing_f.geojson', key: 'crossings',  render: renderCrossings },
+  { name: './result-data/footway_f.geojson',  key: 'footways',   render: renderFootways  },
+];
+async function loadAll() {
+  await Promise.all(FILES.map(async ({ name, key, render }) => {
+    setLoadRow(key, 'loading', name);
+    try {
+      const res = await fetch(name);
+      if (!res.ok) throw new Error(res.status);
+      const data = await res.json();
+      render(data);
+      setLoadRow(key, 'ok', `${name} — ${(data.features||[]).length.toLocaleString('uk')} об.`);
+    } catch(e) {
+      setLoadRow(key, 'err', `${name} — не знайдено`);
+    }
+  }));
+}
+loadAll();
+
+// STATS
+function updateStats() {
+  const bar = document.getElementById('statsBar');
+  bar.innerHTML = [
+    ['cntStreets','вул.'], ['cntBuildings','буд.'], ['cntParks','парк.']
+  ].map(([id,unit]) => {
+    const v = document.getElementById(id).textContent;
+    return v ? `<div class="stat-chip"><strong>${v}</strong> ${unit}</div>` : '';
+  }).join('');
+}
+
+// INFO PANEL
+function showInfo(title, data) {
+  document.getElementById('infoPanelTitle').textContent = title;
+  document.getElementById('infoPanelBody').innerHTML = Object.entries(data)
+    .map(([k,v]) => `<div class="info-row"><span class="info-key">${k}</span><span class="info-val">${v}</span></div>`).join('');
+  document.getElementById('infoPanel').classList.add('visible');
+}
+function closeInfo() { document.getElementById('infoPanel').classList.remove('visible'); }
+map.on('click', closeInfo);
+
+// TAB SWITCHING
+function setActiveLayer(layer) {
+  const s = layer==='streets'||layer==='all';
+  const b = layer==='buildings'||layer==='all';
+  layers.streets.on = s; layers.buildings.on = b;
+  Object.keys(layers).forEach(syncToggle);
+  document.getElementById('streetLegendWrap').style.display   = s ? '' : 'none';
+  document.getElementById('buildingLegendWrap').style.display = b ? '' : 'none';
+}
+document.querySelectorAll('.tab-btn, .mobile-tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const layer = btn.dataset.layer;
+    document.querySelectorAll('[data-layer]').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll(`[data-layer="${layer}"]`).forEach(b => b.classList.add('active'));
+    setActiveLayer(layer);
+  });
+});
+setActiveLayer('all');
+
+// MOBILE MENU
+document.getElementById('menuBtn').addEventListener('click', () => {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('overlay').classList.toggle('open');
+});
+document.getElementById('overlay').addEventListener('click', () => {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('overlay').classList.remove('open');
+});
+</script>
+</body>
+</html>
