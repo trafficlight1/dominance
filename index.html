@@ -330,9 +330,6 @@
     </div>
     <div class="sidebar-inner">
 
-      <p class="section-title">Статус даних</p>
-      <div id="loadStatus"></div>
-
       <p class="section-title">Шари</p>
       <div class="layer-row" id="rowStreets">
         <span class="toggle on" id="togStreets"></span>
@@ -710,15 +707,6 @@ function renderFootways(data) {
   document.getElementById('cntFootways').textContent = (data.features||[]).length.toLocaleString('uk');
 }
 
-// LOAD STATUS UI
-function setLoadRow(id, state, text) {
-  let el = document.getElementById('lr_'+id);
-  if (!el) { el = document.createElement('div'); el.id = 'lr_'+id; el.className = 'loading-row'; document.getElementById('loadStatus').appendChild(el); }
-  const icon = state==='loading' ? '<div class="spinner"></div>' : state==='ok' ? '<div class="dot-ok"></div>' : '<div class="dot-err"></div>';
-  el.innerHTML = `${icon}<span>${text}</span>`;
-}
-
-// FETCH FILES
 const FILES = [
   { name: './data/12.geojson',  key: 'streets',   render: renderStreets   },
   { name: './data/DATA4_f.geojson',    key: 'buildings',  render: renderBuildings },
@@ -726,17 +714,16 @@ const FILES = [
   { name: './data/crossing_f.geojson', key: 'crossings',  render: renderCrossings },
   { name: './data/footway_f.geojson',  key: 'footways',   render: renderFootways  },
 ];
+
 async function loadAll() {
-  await Promise.all(FILES.map(async ({ name, key, render }) => {
-    setLoadRow(key, 'loading', name);
+  await Promise.all(FILES.map(async ({ name, render }) => {
     try {
       const res = await fetch(name);
       if (!res.ok) throw new Error(res.status);
       const data = await res.json();
       render(data);
-      setLoadRow(key, 'ok', `${name} — ${(data.features||[]).length.toLocaleString('uk')} об.`);
     } catch(e) {
-      setLoadRow(key, 'err', `${name} — не знайдено`);
+      console.warn(`[lviv] failed to load ${name}:`, e);
     }
   }));
 }
