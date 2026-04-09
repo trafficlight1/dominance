@@ -720,11 +720,11 @@ function setLoadRow(id, state, text) {
 
 // FETCH FILES
 const FILES = [
-  { name: './result-data/12.geojson',  key: 'streets',   render: renderStreets   },
-  { name: './result-data/DATA4_f.geojson',    key: 'buildings',  render: renderBuildings },
-  { name: './result-data/park_f.geojson',     key: 'parks',      render: renderParks     },
-  { name: './result-data/crossing_f.geojson', key: 'crossings',  render: renderCrossings },
-  { name: './result-data/footway_f.geojson',  key: 'footways',   render: renderFootways  },
+  { name: './data/12.geojson',  key: 'streets',   render: renderStreets   },
+  { name: './data/DATA4_f.geojson',    key: 'buildings',  render: renderBuildings },
+  { name: './data/park_f.geojson',     key: 'parks',      render: renderParks     },
+  { name: './data/crossing_f.geojson', key: 'crossings',  render: renderCrossings },
+  { name: './data/footway_f.geojson',  key: 'footways',   render: renderFootways  },
 ];
 async function loadAll() {
   await Promise.all(FILES.map(async ({ name, key, render }) => {
