@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-  <link rel="icon" type="image/svg+xml" href="./data/LOGO_WHITE.svg">
-<title>Морфологічний аналіз. Підсвітити ліхтар</title>
+<link rel="icon" type="image/svg+xml" href="./data/LOGO_WHITE.svg">
+<title>Морфологія Львова</title>
 <style>
 @font-face {
   font-family: 'EuclidFlex';
@@ -113,7 +113,9 @@
 
   /* SANDWICH DROPDOWN */
   .sandwich-dropdown {
-    display: none;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
     position: fixed;
     top: 68px;
     right: 0;
@@ -122,17 +124,19 @@
     backdrop-filter: blur(24px) saturate(180%);
     -webkit-backdrop-filter: blur(24px) saturate(180%);
     border-bottom: 1px solid rgba(255,255,255,0.08);
-    z-index: 998;
+    z-index: 999;
     padding: 10px 16px 14px;
-    flex-direction: column;
-    gap: 4px;
-    animation: dropIn 0.2s ease;
+    /* Default: hidden above header */
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-100%);
+    transition: opacity 0.25s ease, transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
   }
-  @keyframes dropIn {
-    from { opacity: 0; transform: translateY(-8px); }
-    to   { opacity: 1; transform: translateY(0); }
+  .sandwich-dropdown.open {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
   }
-  .sandwich-dropdown.open { display: flex; }
   .sandwich-nav-item {
     padding: 10px 14px;
     font-family: 'Unbounded', sans-serif;
@@ -159,12 +163,10 @@
     left: 16px;
     width: 256px;
     max-height: calc(100% - 68px - 32px);
-    background: rgba(13,15,20,0.60);
-    backdrop-filter: blur(24px) saturate(180%);
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    background: rgba(18, 21, 30, 0.97);
     border: 1px solid rgba(255,255,255,0.09);
     border-radius: 16px;
-    box-shadow: 0 8px 40px rgba(0,0,0,0.55), 0 1px 0 rgba(255,255,255,0.05) inset;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.55);
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -175,6 +177,7 @@
   .sidebar-inner {
     flex: 1;
     overflow-y: auto;
+    overflow-x: hidden;
     padding: 16px;
     scrollbar-width: thin;
     scrollbar-color: var(--border) transparent;
@@ -275,7 +278,8 @@
   .info-panel {
     position: absolute;
     bottom: 20px; right: 20px;
-    width: 230px;
+    width: 280px;
+    max-height: calc(100vh - 120px);
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 12px;
@@ -284,6 +288,9 @@
     font-size: 12px;
     display: none;
     box-shadow: 0 8px 32px rgba(0,0,0,0.45);
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
   }
   .info-panel.visible { display: block; }
   .info-title {
@@ -390,7 +397,7 @@
       transition: all 0.15s;
     }
     .mobile-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
-    .info-panel { width: calc(100vw - 28px); right: 14px; bottom: 14px; }
+    .info-panel { width: calc(100vw - 28px); right: 14px; bottom: 14px; max-height: 50vh; }
     .stats-bar { top: 8px; gap: 4px; }
     .stat-chip { font-size: 10px; padding: 3px 8px; }
     .header-logo-img { width: 34px; height: 34px; }
@@ -400,7 +407,146 @@
   }
   @media (min-width: 681px) { .mobile-tabs { display: none; } }
 
-  /* ── SPLASH SCREEN ──────────────────────────────────────────── */
+  /* ── STREET SEARCH ─────────────────────────────────────────── */
+  .search-wrap {
+    position: absolute;
+    top: calc(68px + 12px);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 890;
+    width: min(360px, calc(100vw - 32px));
+  }
+  /* When sidebar is open on mobile — push search behind overlay */
+  body.sidebar-open .search-wrap { z-index: 840; pointer-events: none; }
+  .search-box {
+    display: flex;
+    align-items: center;
+    background: rgba(13,15,20,0.75);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 10px;
+    padding: 0 12px;
+    gap: 8px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+    transition: border-color 0.15s;
+  }
+ /* .search-box:focus-within {
+    border-color: var(--accent);
+  }*/
+  .search-icon {
+    color: var(--text-muted);
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+  .search-input {
+    flex: 1;
+    background: none;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-family: 'Onest', sans-serif;
+    font-size: 13px;
+    padding: 10px 0;
+    min-width: 0;
+  }
+  .search-input::placeholder { color: var(--text-muted); }
+  .search-clear {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 2px 4px;
+    border-radius: 4px;
+    display: none;
+    transition: color 0.12s;
+  }
+  .search-clear:hover { color: var(--text); }
+  .search-clear.visible { display: block; }
+  .search-dropdown {
+    background: rgba(13,15,20,0.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.10);
+    border-top: none;
+    border-radius: 0 0 10px 10px;
+    max-height: 260px;
+    overflow-y: auto;
+    display: none;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+  .search-dropdown.open { display: block; }
+  .search-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    cursor: pointer;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    transition: background 0.1s;
+    font-size: 12px;
+  }
+  .search-item:last-child { border-bottom: none; }
+  .search-item:hover, .search-item.active { background: rgba(139,0,0,0.18); }
+  .search-item-icon { color: var(--text-muted); font-size: 12px; flex-shrink: 0; }
+  .search-item-name { color: var(--text); flex: 1; }
+  .search-item-count { color: var(--text-muted); font-size: 10px; }
+  .search-no-results {
+    padding: 14px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 12px;
+  }
+  /* When sidebar menu is open — bring sidebar above everything, disable search */
+  body.sidebar-open .sidebar { z-index: 960; }
+  body.sidebar-open .search-wrap { z-index: 840; pointer-events: none; }
+
+  @media (max-width: 680px) {
+    .search-wrap { top: calc(56px + 8px); width: calc(100vw - 24px); }
+  }
+
+  /* Hide search bar when sandwich dropdown is open */
+  .search-wrap {
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease;
+  }
+  .search-wrap.dropdown-hidden {
+    transform: translateX(-50%) translateY(-100px);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  @media (max-width: 680px) {
+    .search-wrap.dropdown-hidden {
+      transform: translateX(-50%) translateY(-80px);
+      opacity: 0;
+      pointer-events: none;
+    }
+  }
+
+  /* Badge rows inside info panel */
+  .info-badge {
+    display: inline-flex;
+    align-items: center;
+    background: rgba(139,0,0,0.18);
+    border: 1px solid rgba(139,0,0,0.35);
+    border-radius: 5px;
+    padding: 1px 7px;
+    font-size: 11px;
+    color: #fca5a5;
+    font-weight: 500;
+  }
+  .info-badge.green {
+    background: rgba(52,211,153,0.12);
+    border-color: rgba(52,211,153,0.3);
+    color: #6ee7b7;
+  }
+  .info-badge.gray {
+    background: rgba(100,100,120,0.18);
+    border-color: rgba(100,100,120,0.3);
+    color: var(--text-muted);
+  }
   #splash {
     position: fixed;
     inset: 0;
@@ -437,6 +583,7 @@
     backdrop-filter: blur(18px) saturate(160%);
     -webkit-backdrop-filter: blur(18px) saturate(160%);
     border: 1px solid rgba(255,255,255,0.08) !important;
+    overflow-y: auto;
   }
   .stat-chip {
     background: rgba(13,15,20,0.55) !important;
@@ -509,13 +656,24 @@
   </div>
 </header>
 
-<!-- Sandwich dropdown (mobile) -->
+<div class="overlay" id="overlay"></div>
+
+<!-- ── SANDWICH DROPDOWN ─────────────────────────────────────── -->
 <div class="sandwich-dropdown" id="sandwichDropdown">
-  <div class="sandwich-nav-item">МОРФОЛОГІЧНИЙ АНАЛІЗ</div>
-  <div class="sandwich-nav-item" style="color:var(--accent);">Lviv · OSM Data</div>
+  <div class="sandwich-nav-item mobile-tab active" data-layer="all">Всі шари</div>
+  <div class="sandwich-nav-item mobile-tab" data-layer="streets">Вулиці</div>
+  <div class="sandwich-nav-item mobile-tab" data-layer="buildings">Будинки</div>
 </div>
 
-<div class="overlay" id="overlay"></div>
+<!-- ── STREET SEARCH ─────────────────────────────────────────── -->
+<div class="search-wrap" id="searchWrap">
+  <div class="search-box">
+    <span class="search-icon"></span>
+    <input class="search-input" id="searchInput" type="text" placeholder="Пошук вулиці" autocomplete="off" />
+    <button class="search-clear" id="searchClear">✕</button>
+  </div>
+  <div class="search-dropdown" id="searchDropdown"></div>
+</div>
 
 <div class="main">
   <aside class="sidebar" id="sidebar">
@@ -561,7 +719,7 @@
         <div id="buildingEpochLegend"></div>
         <div class="legend-item" style="margin-top:8px">
           <div style="width:9px;height:9px;background:rgba(70,70,70,0.5);border-radius:50%;flex-shrink:0"></div>
-          <span>Рік досліджується</span>
+          <span>Рік невідомий</span>
         </div>
         <div id="buildingYearRange" style="font-size:11px;color:var(--text-muted);margin-top:6px"></div>
       </div>
@@ -639,10 +797,10 @@ const STREET_LABELS = {
 };
 
 // MAP
+function isMobile() { return window.innerWidth <= 680; }
 const LVIV_BOUNDS = L.latLngBounds(L.latLng(49.77, 23.86), L.latLng(50.00, 24.18));
-const isMobile = window.innerWidth <= 680;
 const map = L.map('map', {
-  center: [49.842, 24.031], zoom: isMobile ? 14 : 14,
+  center: [49.842, 24.031], zoom: isMobile() ? 14 : 14,
   maxBounds: LVIV_BOUNDS, maxBoundsViscosity: 0.92,
   minZoom: 11, maxZoom: 19,
   zoomControl: false,
@@ -693,6 +851,41 @@ function m2px(m) {
 
 let streetLayersRef = [];
 let streetTypesFound = new Set();
+// Street search index: { name, bounds, segments[] }
+let streetSearchIndex = {};
+
+// Labels for all COLUMNS_TO_KEEP fields
+const FIELD_LABELS = {
+  'name:uk':               'Назва (укр.)',
+  'maxspeed':              'Макс. швидкість',
+  'is_tram':               'Трамвайна лінія',
+  'bicycle':               'Велосипед',
+  'lanes':                 'Смуги руху',
+  'full_id':               'ID об\'єкта',
+  'seg_len_m':             'Довжина сегм., м',
+  'street_width_m':        'Ширина вулиці, м',
+  'lighting_pattern_id':   'ID типу освітлення',
+  'lighting_pattern_name': 'Тип освітлення',
+};
+
+function formatFieldValue(key, val) {
+  if (val === null || val === undefined || val === '' || val === 'None') return '<span class="info-badge gray">Ні</span>';
+  if (key === 'is_tram') {
+    const v = String(val).toLowerCase();
+    if (v === 'true' || v === '1' || v === 'yes') return '<span class="info-badge green">Так</span>';
+    if (v === 'false' || v === '0' || v === 'no') return '<span class="info-badge gray">Ні</span>';
+  }
+  if (key === 'bicycle') {
+    const v = String(val).toLowerCase();
+    if (v === 'yes' || v === 'designated') return `<span class="info-badge green">Так</span>`;
+    if (v === 'no') return `<span class="info-badge gray">НІ</span>`;
+  }
+  if (key === 'maxspeed') return `${val} км/год`;
+  if (key === 'seg_len_m') return `${parseFloat(val).toFixed(1)} м`;
+  if (key === 'street_width_m') return `${parseFloat(val).toFixed(1)} м`;
+  return String(val);
+}
+
 function resolveStreetColor(p) {
   // Primary: lighting_pattern_name is the morphological type
   const name = p.lighting_pattern_name;
@@ -705,6 +898,7 @@ function resolveStreetColor(p) {
 function renderStreets(data) {
   layers.streets.group.clearLayers();
   streetLayersRef = []; streetTypesFound = new Set();
+  streetSearchIndex = {};
   const pw = m2px(1);
   (data.features || []).forEach(feat => {
     if (!feat.geometry) return;
@@ -718,24 +912,32 @@ function renderStreets(data) {
     if (!rawCoords) return;
     rawCoords.forEach(coords => {
       const weight = Math.max(1, widthM * pw);
-      const line = L.polyline(coordsToLatLng(coords), {
+      const latlngs = coordsToLatLng(coords);
+      const line = L.polyline(latlngs, {
         color, weight, opacity: 0.82, lineCap: 'round', lineJoin: 'round'
       });
-      line.on('click', e => { L.DomEvent.stopPropagation(e); showInfo('Вулиця', {
-        'Тип': p.street_type_name || p.morph_type || STREET_LABELS[hw] || hw,
-        'Ширина': p.street_width_m != null ? p.street_width_m+' м' : (p.width || '—'),
-        'Довжина': p.seg_len_m != null ? Math.round(p.seg_len_m)+' м' : '—',
-        'Освітлення': p.lighting_pattern_name || '—',
-        'Тип освітлення': p.lighting_pattern_id || '—',
-        'ID': p.full_id || '—',
-      }); });
+      line.on('click', e => {
+        L.DomEvent.stopPropagation(e);
+        showStreetInfo(p);
+      });
       layers.streets.group.addLayer(line);
       streetLayersRef.push({ line, widthM, typeKey: hw });
+
+      // Build search index by name:uk
+      const streetName = p['name:uk'];
+      if (streetName) {
+        const key = streetName.toLowerCase();
+        if (!streetSearchIndex[streetName]) {
+          streetSearchIndex[streetName] = { name: streetName, latlngs: [] };
+        }
+        streetSearchIndex[streetName].latlngs.push(...latlngs);
+      }
     });
   });
   renderStreetLegend();
   document.getElementById('cntStreets').textContent = (data.features||[]).length.toLocaleString('uk');
   updateStats();
+  initStreetSearch();
 }
 map.on('zoomend', () => {
   if (!streetLayersRef.length) return;
@@ -934,7 +1136,8 @@ function renderFootways(data) {
 
 // FETCH FILES
 const FILES = [
-  { name: './data/13.geojson',  key: 'streets',   render: renderStreets   },
+  { name: './data/14.geojson',  key: 'streets',   render: renderStreets   },
+  //{ name: './result-data/DATA4_f.geojson',    key: 'buildings',  render: renderBuildings },
   { name: './data/park_f.geojson',     key: 'parks',      render: renderParks     },
   { name: './data/crossing_f.geojson', key: 'crossings',  render: renderCrossings },
   { name: './data/footway_f.geojson',  key: 'footways',   render: renderFootways  },
@@ -999,14 +1202,33 @@ loadAll();
 function updateStats() {
   const bar = document.getElementById('statsBar');
   bar.innerHTML = [
-    ['cntStreets','вул.'], ['cntBuildings','буд.'], ['cntParks','парк.']
+    ['cntStreets','сег.'], ['cntBuildings','буд.'], ['cntParks','зелених зон.']
   ].map(([id,unit]) => {
     const v = document.getElementById(id).textContent;
     return v ? `<div class="stat-chip"><strong>${v}</strong> ${unit}</div>` : '';
   }).join('');
 }
 
-// INFO PANEL
+// INFO PANEL — rich street info with all COLUMNS_TO_KEEP
+function showStreetInfo(p) {
+  const COLS = ['name:uk','maxspeed','is_tram','bicycle','lanes','full_id','seg_len_m','street_width_m','lighting_pattern_id','lighting_pattern_name'];
+  document.getElementById('infoPanelTitle').textContent = p['name:uk'] || 'Вулиця';
+  let html = '';
+  COLS.forEach(key => {
+    const raw = p[key];
+    const formatted = formatFieldValue(key, raw);
+    const label = FIELD_LABELS[key] || key;
+    // Skip name:uk in body (it's the title) — but show it
+    if (formatted === null) {
+      html += `<div class="info-row"><span class="info-key">${label}</span><span class="info-val" style="color:var(--text-muted)">—</span></div>`;
+    } else {
+      html += `<div class="info-row"><span class="info-key">${label}</span><span class="info-val">${formatted}</span></div>`;
+    }
+  });
+  document.getElementById('infoPanelBody').innerHTML = html;
+  document.getElementById('infoPanel').classList.add('visible');
+}
+
 function showInfo(title, data) {
   document.getElementById('infoPanelTitle').textContent = title;
   document.getElementById('infoPanelBody').innerHTML = Object.entries(data)
@@ -1015,6 +1237,150 @@ function showInfo(title, data) {
 }
 function closeInfo() { document.getElementById('infoPanel').classList.remove('visible'); }
 map.on('click', closeInfo);
+
+// ── STREET SEARCH ────────────────────────────────────────────────
+let searchDebounceTimer = null;
+let activeSearchIdx = -1;
+
+function normStr(s) {
+  return s.toLowerCase()
+    .replace(/вулиця\s*/gi, '')
+    .replace(/вул\.\s*/gi, '')
+    .replace(/проспект\s*/gi, '')
+    .replace(/пр\.\s*/gi, '')
+    .replace(/провулок\s*/gi, '')
+    .replace(/пров\.\s*/gi, '')
+    .trim();
+}
+
+function localStreetSearch(query) {
+  if (!query || query.length < 2) return [];
+  const q = normStr(query);
+  const results = [];
+  Object.values(streetSearchIndex).forEach(entry => {
+    const n = normStr(entry.name);
+    if (n.includes(q)) {
+      results.push(entry);
+    }
+  });
+  // Sort: starts-with first
+  results.sort((a, b) => {
+    const an = normStr(a.name), bn = normStr(b.name);
+    const aStarts = an.startsWith(q) ? 0 : 1;
+    const bStarts = bn.startsWith(q) ? 0 : 1;
+    return aStarts - bStarts || a.name.localeCompare(b.name, 'uk');
+  });
+  return results.slice(0, 10);
+}
+
+async function osmNominatimSearch(query) {
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query + ', Львів')}&format=json&limit=5&addressdetails=1&accept-language=uk`;
+    const res = await fetch(url, { headers: { 'Accept-Language': 'uk' } });
+    const data = await res.json();
+    return data.filter(d => d.type === 'road' || d.type === 'residential' || d.class === 'highway' || d.type === 'pedestrian' || d.type === 'footway');
+  } catch(e) { return []; }
+}
+
+function renderDropdown(localResults, query) {
+  const dd = document.getElementById('searchDropdown');
+  activeSearchIdx = -1;
+  if (!query || query.length < 2) { dd.classList.remove('open'); dd.innerHTML = ''; return; }
+
+  let html = '';
+  if (localResults.length === 0) {
+    html = `<div class="search-no-results">Нічого не знайдено у даних. Спробуйте інший запит.</div>`;
+  } else {
+    localResults.forEach((entry, i) => {
+      html += `<div class="search-item" data-street="${encodeURIComponent(entry.name)}" data-idx="${i}">
+        <span class="search-item-icon">🛣</span>
+        <span class="search-item-name">${highlightMatch(entry.name, query)}</span>
+      </div>`;
+    });
+  }
+  dd.innerHTML = html;
+  dd.classList.add('open');
+
+  // Click handlers
+  dd.querySelectorAll('.search-item').forEach((el, i) => {
+    el.addEventListener('click', () => {
+      const name = decodeURIComponent(el.dataset.street);
+      selectStreet(name);
+    });
+  });
+}
+
+function highlightMatch(name, query) {
+  const q = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return name.replace(new RegExp(`(${q})`, 'gi'), '<strong style="color:var(--text)">$1</strong>');
+}
+
+function selectStreet(name) {
+  const entry = streetSearchIndex[name];
+  if (!entry || !entry.latlngs || !entry.latlngs.length) return;
+  // Compute bounds of all segments for this street
+  const bounds = L.latLngBounds(entry.latlngs);
+  map.fitBounds(bounds, { padding: [60, 60], maxZoom: 17 });
+  document.getElementById('searchInput').value = name;
+  document.getElementById('searchClear').classList.add('visible');
+  document.getElementById('searchDropdown').classList.remove('open');
+  document.getElementById('searchDropdown').innerHTML = '';
+}
+
+function initStreetSearch() {
+  const input = document.getElementById('searchInput');
+  const clear = document.getElementById('searchClear');
+  const dd = document.getElementById('searchDropdown');
+
+  input.addEventListener('input', () => {
+    const q = input.value.trim();
+    clear.classList.toggle('visible', q.length > 0);
+    clearTimeout(searchDebounceTimer);
+    if (q.length < 2) { dd.classList.remove('open'); dd.innerHTML = ''; return; }
+    searchDebounceTimer = setTimeout(() => {
+      const results = localStreetSearch(q);
+      renderDropdown(results, q);
+    }, 180);
+  });
+
+  input.addEventListener('keydown', e => {
+    const items = dd.querySelectorAll('.search-item');
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      activeSearchIdx = Math.min(activeSearchIdx + 1, items.length - 1);
+      items.forEach((el, i) => el.classList.toggle('active', i === activeSearchIdx));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      activeSearchIdx = Math.max(activeSearchIdx - 1, 0);
+      items.forEach((el, i) => el.classList.toggle('active', i === activeSearchIdx));
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (activeSearchIdx >= 0 && items[activeSearchIdx]) {
+        const name = decodeURIComponent(items[activeSearchIdx].dataset.street);
+        selectStreet(name);
+      } else if (items.length === 1) {
+        const name = decodeURIComponent(items[0].dataset.street);
+        selectStreet(name);
+      }
+    } else if (e.key === 'Escape') {
+      dd.classList.remove('open'); dd.innerHTML = '';
+    }
+  });
+
+  clear.addEventListener('click', () => {
+    input.value = '';
+    clear.classList.remove('visible');
+    dd.classList.remove('open'); dd.innerHTML = '';
+    input.focus();
+  });
+
+  // Close dropdown on outside click
+  document.addEventListener('click', e => {
+    if (!document.getElementById('searchWrap').contains(e.target)) {
+      dd.classList.remove('open');
+    }
+  });
+}
 
 // TAB SWITCHING
 function setActiveLayer(layer) {
@@ -1035,16 +1401,27 @@ document.querySelectorAll('.tab-btn, .mobile-tab').forEach(btn => {
 setActiveLayer('all');
 
 // MOBILE MENU
-document.getElementById('menuBtn').addEventListener('click', () => {
-  document.getElementById('sidebar').classList.toggle('open');
-  document.getElementById('overlay').classList.toggle('open');
-  document.getElementById('sandwichDropdown').classList.toggle('open');
-});
-document.getElementById('overlay').addEventListener('click', () => {
+function closeMobileMenu() {
   document.getElementById('sidebar').classList.remove('open');
   document.getElementById('overlay').classList.remove('open');
   document.getElementById('sandwichDropdown').classList.remove('open');
+  document.body.classList.remove('sidebar-open');
+  document.getElementById('searchWrap').classList.remove('dropdown-hidden');
+  document.getElementById('menuBtn').textContent = '☰';
+}
+
+document.getElementById('menuBtn').addEventListener('click', () => {
+  const isOpen = document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('overlay').classList.toggle('open');
+  const dropdownOpen = document.getElementById('sandwichDropdown').classList.toggle('open');
+  document.body.classList.toggle('sidebar-open', isOpen);
+  // Hide search bar with upward animation only on mobile when dropdown is open
+  if (isMobile()) {
+    document.getElementById('searchWrap').classList.toggle('dropdown-hidden', dropdownOpen);
+  }
+  document.getElementById('menuBtn').textContent = dropdownOpen ? '✕' : '☰';
 });
+document.getElementById('overlay').addEventListener('click', closeMobileMenu);
 </script>
 </body>
 </html>
