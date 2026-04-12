@@ -24,7 +24,7 @@
     --border: #252a38;
     --text: #e8eaf0;
     --text-muted: #6b7280;
-    --accent: #8B0000;
+    --accent: #2D313D;
     --panel-w: 272px;
   }
 
@@ -702,6 +702,17 @@
         <span class="layer-count" id="cntFootways"></span>
       </div>
 
+      <p class="section-title" style="margin-top:20px">Режим відображення</p>
+      <div class="layer-row" id="rowSpeedMode">
+        <span class="toggle" id="togSpeedMode"></span>
+        <span class="layer-label">Швидкість руху</span>
+      </div>
+
+      <div id="speedLegendWrap" style="display:none">
+        <p class="section-title">Макс. швидкість, км/год</p>
+        <div id="speedLegend"></div>
+      </div>
+
       <div id="streetLegendWrap">
         <p class="section-title">Типи вулиць</p>
         <div id="streetLegend"></div>
@@ -789,6 +800,40 @@ const STREET_LABELS = {
   'default':        'Вулиця',
 };
 
+// SPEED COLOR PALETTE (coordinated with site palette)
+const SPEED_STEPS = [
+  { max:  0,   color: '#6b7280', label: 'Невідомо' },
+  { max: 20,   color: '#4f8cff', label: '20'       },
+  { max: 50,   color: '#84DF5A', label: '50'       },
+  { max: 9999, color: '#FF2400', label: '110'      },
+];
+
+function speedToColor(raw) {
+  if (!raw || raw === 'None' || raw === '') return SPEED_STEPS[0].color; // gray
+  const v = parseInt(String(raw).replace(/[^0-9]/g, '')) || 0;
+  if (v === 0) return SPEED_STEPS[0].color;
+  for (let i = 1; i < SPEED_STEPS.length; i++) {
+    if (v <= SPEED_STEPS[i].max) return SPEED_STEPS[i].color;
+  }
+  return SPEED_STEPS[SPEED_STEPS.length - 1].color;
+}
+
+function renderSpeedLegend() {
+  const el = document.getElementById('speedLegend');
+  if (!el) return;
+  const labels = [
+    { color: '#6b7280', label: 'Невідомо' },
+    { color: '#4f8cff', label: '20 км/год' },
+    { color: '#84DF5A', label: '50 км/год' },
+    { color: '#FF2400', label: '110 км/год' },
+  ];
+  el.innerHTML = labels.map(({ color, label }) => `
+    <div style="display:flex;align-items:center;gap:8px;padding:3px 0">
+      <div style="width:18px;height:3px;border-radius:2px;background:${color};flex-shrink:0"></div>
+      <span style="font-size:11px;color:var(--text-muted);flex:1">${label}</span>
+    </div>`).join('');
+}
+
 // MAP
 function isMobile() { return window.innerWidth <= 680; }
 const LVIV_BOUNDS = L.latLngBounds(L.latLng(49.77, 23.86), L.latLng(50.00, 24.18));
@@ -844,6 +889,7 @@ function m2px(m) {
 
 let streetLayersRef = [];
 let streetTypesFound = new Set();
+let speedMode = false;
 // Street search index: { name, bounds, segments[] }
 let streetSearchIndex = {};
 
@@ -914,7 +960,7 @@ function renderStreets(data) {
         showStreetInfo(p);
       });
       layers.streets.group.addLayer(line);
-      streetLayersRef.push({ line, widthM, typeKey: hw });
+      streetLayersRef.push({ line, widthM, typeKey: hw, typeColor: color, speed: p.maxspeed || '' });
 
       // Build search index by name:uk
       const streetName = p['name:uk'];
@@ -928,6 +974,8 @@ function renderStreets(data) {
     });
   });
   renderStreetLegend();
+  renderSpeedLegend();
+  if (speedMode) applySpeedColors();
   document.getElementById('cntStreets').textContent = (data.features||[]).length.toLocaleString('uk');
   updateStats();
   initStreetSearch();
@@ -980,6 +1028,29 @@ function renderStreetLegend() {
     }
   });
 }
+
+// ── SPEED MODE ────────────────────────────────────────────────────
+function applySpeedColors() {
+  streetLayersRef.forEach(({ line, speed }) => {
+    line.setStyle({ color: speedToColor(speed), opacity: 0.90 });
+  });
+}
+function restoreTypeColors() {
+  streetLayersRef.forEach(({ line, typeColor }) => {
+    line.setStyle({ color: typeColor, opacity: 0.82 });
+  });
+}
+
+// Speed toggle
+const togSpeedMode = document.getElementById('togSpeedMode');
+document.getElementById('rowSpeedMode').addEventListener('click', e => {
+  e.stopPropagation();
+  speedMode = !speedMode;
+  togSpeedMode.classList.toggle('on', speedMode);
+  document.getElementById('speedLegendWrap').style.display = speedMode ? '' : 'none';
+  document.getElementById('streetLegendWrap').style.display = speedMode ? 'none' : '';
+  if (speedMode) applySpeedColors(); else restoreTypeColors();
+});
 
 // Reproject a GeoJSON feature's coordinates from EPSG:3857 to WGS84 in-place (deep clone)
 function reprojectFeature(feat) {
@@ -1380,7 +1451,7 @@ function setActiveLayer(layer) {
   const b = layer==='buildings'||layer==='all';
   layers.streets.on = s; layers.buildings.on = b;
   Object.keys(layers).forEach(syncToggle);
-  document.getElementById('streetLegendWrap').style.display   = s ? '' : 'none';
+  document.getElementById('streetLegendWrap').style.display = (s && !speedMode) ? '' : 'none';
 }
 document.querySelectorAll('.tab-btn, .mobile-tab').forEach(btn => {
   btn.addEventListener('click', () => {
