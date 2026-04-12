@@ -132,11 +132,7 @@
     transform: translateY(-100%);
     transition: opacity 0.25s ease, transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
   }
-  .sandwich-dropdown.open {
-    opacity: 1;
-    pointer-events: auto;
-    transform: translateY(0);
-  }
+ 
   .sandwich-nav-item {
     padding: 10px 14px;
     font-family: 'Unbounded', sans-serif;
@@ -358,7 +354,6 @@
   .stat-chip strong { color: var(--text); font-weight: 500; }
 
   /* MOBILE */
-  .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 850; }
 
   @media (max-width: 680px) {
     :root { --panel-w: 285px; }
@@ -660,9 +655,7 @@
 
 <!-- ── SANDWICH DROPDOWN ─────────────────────────────────────── -->
 <div class="sandwich-dropdown" id="sandwichDropdown">
-  <div class="sandwich-nav-item mobile-tab active" data-layer="all">Всі шари</div>
-  <div class="sandwich-nav-item mobile-tab" data-layer="streets">Вулиці</div>
-  <div class="sandwich-nav-item mobile-tab" data-layer="buildings">Будинки</div>
+
 </div>
 
 <!-- ── STREET SEARCH ─────────────────────────────────────────── -->
@@ -1137,7 +1130,6 @@ function renderFootways(data) {
 // FETCH FILES
 const FILES = [
   { name: './data/14.geojson',  key: 'streets',   render: renderStreets   },
-  //{ name: './result-data/DATA4_f.geojson',    key: 'buildings',  render: renderBuildings },
   { name: './data/park_f.geojson',     key: 'parks',      render: renderParks     },
   { name: './data/crossing_f.geojson', key: 'crossings',  render: renderCrossings },
   { name: './data/footway_f.geojson',  key: 'footways',   render: renderFootways  },
